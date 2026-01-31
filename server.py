@@ -281,6 +281,22 @@ async def check_domain_availability(domain: str) -> str:
     return "\n".join(response_lines)
 
 
+async def _check_single_domain(domain: str) -> tuple[str, str]:
+    """Helper to check a single domain and return (domain, status)."""
+    valid, normalized = validate_domain(domain)
+    if not valid:
+        return (domain, f"ERROR - {normalized}")
+
+    check_results = await asyncio.gather(
+        check_whois(normalized),
+        check_dns(normalized),
+        check_rdap(normalized),
+    )
+
+    status, _ = determine_availability(list(check_results))
+    return (normalized, status.value.upper())
+
+
 @mcp.tool()
 async def check_multiple_domains(domains: list[str]) -> str:
     """
@@ -303,25 +319,10 @@ async def check_multiple_domains(domains: list[str]) -> str:
     if len(domains) > 10:
         return "Error: Maximum 10 domains per request"
 
-    results = []
+    # Run all domain checks in parallel
+    results = await asyncio.gather(*[_check_single_domain(d) for d in domains])
 
-    for domain in domains:
-        valid, normalized = validate_domain(domain)
-        if not valid:
-            results.append(f"{domain}: ERROR - {normalized}")
-            continue
-
-        # Run checks for this domain
-        check_results = await asyncio.gather(
-            check_whois(normalized),
-            check_dns(normalized),
-            check_rdap(normalized),
-        )
-
-        status, _ = determine_availability(list(check_results))
-        results.append(f"{normalized}: {status.value.upper()}")
-
-    return "\n".join(results)
+    return "\n".join(f"{domain}: {status}" for domain, status in results)
 
 
 if __name__ == "__main__":
