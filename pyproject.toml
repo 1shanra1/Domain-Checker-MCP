@@ -4,9 +4,6 @@ version = "0.1.0"
 description = "MCP server for checking domain name availability across .com, .ai, and .net TLDs"
 readme = "README.md"
 requires-python = ">=3.13"
-authors = [
-    { name = "Ishan Rai" }
-]
 dependencies = [
     "dnspython>=2.8.0",
     "httpx>=0.28.1",
